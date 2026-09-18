@@ -1,22 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Typewriter from "@/app/components/Name/Typewriter";
 
 export default function Home() {
-  const [show, setshow] = useState(false);
-
-  // Canvas ref type fixed
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasElement = canvasRef.current;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (canvasElement === null) {
+      return;
+    }
 
+    // TypeScript-safe canvas reference
+    const canvas: HTMLCanvasElement = canvasElement;
+
+    const context = canvas.getContext("2d");
+
+    if (context === null) {
+      return;
+    }
+
+    const ctx: CanvasRenderingContext2D = context;
+
+    // =========================
+    // Resize Canvas
+    // =========================
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -24,20 +35,29 @@ export default function Home() {
 
     resize();
 
-    let stars: {
+    // =========================
+    // Stars
+    // =========================
+    const stars: Array<{
       x: number;
       y: number;
       r: number;
       speed: number;
-    }[] = [];
+    }> = [];
 
-    let shootingStars: {
+    // =========================
+    // Shooting Stars
+    // =========================
+    const shootingStars: Array<{
       x: number;
       y: number;
       len: number;
       speed: number;
-    }[] = [];
+    }> = [];
 
+    // =========================
+    // Create Normal Stars
+    // =========================
     for (let i = 0; i < 150; i++) {
       stars.push({
         x: Math.random() * canvas.width,
@@ -47,20 +67,38 @@ export default function Home() {
       });
     }
 
-    function createShootingStar() {
+    // =========================
+    // Create Shooting Star
+    // =========================
+    const createShootingStar = () => {
+      const width = canvas.width;
+      const height = canvas.height;
+
       shootingStars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height * 0.5,
+        x: Math.random() * width,
+        y: Math.random() * height * 0.5,
         len: Math.random() * 100 + 50,
         speed: Math.random() * 10 + 6,
       });
-    }
+    };
 
-    const interval = setInterval(createShootingStar, 2000);
+    const shootingStarInterval = window.setInterval(
+      createShootingStar,
+      2000
+    );
 
-    let animationFrameId: number;
+    // =========================
+    // Animation Frame
+    // =========================
+    let animationFrameId = 0;
 
-    function animate() {
+    // =========================
+    // Animation
+    // =========================
+    const animate = () => {
+      // =========================
+      // Black Background
+      // =========================
       ctx.fillStyle = "black";
 
       ctx.fillRect(
@@ -70,15 +108,18 @@ export default function Home() {
         canvas.height
       );
 
-      /* Nebula Glow */
-      const gradient = ctx.createRadialGradient(
-        canvas.width / 2,
-        canvas.height / 2,
-        0,
-        canvas.width / 2,
-        canvas.height / 2,
-        canvas.width / 1.5
-      );
+      // =========================
+      // Nebula Glow
+      // =========================
+      const gradient =
+        ctx.createRadialGradient(
+          canvas.width / 2,
+          canvas.height / 2,
+          0,
+          canvas.width / 2,
+          canvas.height / 2,
+          canvas.width / 1.5
+        );
 
       gradient.addColorStop(
         0,
@@ -104,71 +145,99 @@ export default function Home() {
         canvas.height
       );
 
-      /* Stars */
-      stars.forEach((s) => {
+      // =========================
+      // Normal Stars
+      // =========================
+      stars.forEach((star) => {
         ctx.fillStyle = "white";
 
         ctx.beginPath();
 
         ctx.arc(
-          s.x,
-          s.y,
-          s.r,
+          star.x,
+          star.y,
+          star.r,
           0,
           Math.PI * 2
         );
 
         ctx.fill();
 
-        s.y += s.speed;
+        star.y += star.speed;
 
-        if (s.y > canvas.height) {
-          s.y = 0;
+        if (star.y > canvas.height) {
+          star.y = 0;
         }
       });
 
-      /* Shooting Stars */
-      shootingStars.forEach((s, i) => {
-        ctx.strokeStyle = "rgba(255,255,255,.8)";
+      // =========================
+      // Shooting Stars
+      // =========================
+      for (
+        let i = shootingStars.length - 1;
+        i >= 0;
+        i--
+      ) {
+        const star = shootingStars[i];
+
+        ctx.strokeStyle =
+          "rgba(255,255,255,0.8)";
 
         ctx.lineWidth = 2;
 
         ctx.beginPath();
 
         ctx.moveTo(
-          s.x,
-          s.y
+          star.x,
+          star.y
         );
 
         ctx.lineTo(
-          s.x - s.len,
-          s.y + s.len / 2
+          star.x - star.len,
+          star.y + star.len / 2
         );
 
         ctx.stroke();
 
-        s.x += s.speed;
-        s.y += s.speed;
+        star.x += star.speed;
+        star.y += star.speed;
 
-        if (s.x > canvas.width) {
+        if (
+          star.x > canvas.width ||
+          star.y > canvas.height
+        ) {
           shootingStars.splice(i, 1);
         }
-      });
+      }
 
-      animationFrameId = requestAnimationFrame(animate);
-    }
+      animationFrameId =
+        window.requestAnimationFrame(
+          animate
+        );
+    };
 
+    // Start animation
     animate();
 
+    // =========================
+    // Window Resize
+    // =========================
     window.addEventListener(
       "resize",
       resize
     );
 
+    // =========================
+    // Cleanup
+    // =========================
     return () => {
-      clearInterval(interval);
+      window.clearInterval(
+        shootingStarInterval
+      );
 
-      cancelAnimationFrame(animationFrameId);
+      window.cancelAnimationFrame(
+        animationFrameId
+      );
 
       window.removeEventListener(
         "resize",
@@ -190,16 +259,22 @@ export default function Home() {
         overflow-hidden
       "
     >
-      {/* Canvas Background */}
+      {/* =========================
+          Canvas Background
+      ========================= */}
       <canvas
         ref={canvasRef}
         className="
           absolute
           inset-0
+          w-full
+          h-full
         "
       />
 
-      {/* Extra Glow */}
+      {/* =========================
+          Purple Glow
+      ========================= */}
       <div
         className="
           absolute
@@ -214,6 +289,9 @@ export default function Home() {
         "
       />
 
+      {/* =========================
+          Cyan Glow
+      ========================= */}
       <div
         className="
           absolute
@@ -228,6 +306,9 @@ export default function Home() {
         "
       />
 
+      {/* =========================
+          Main Content
+      ========================= */}
       <div
         className="
           relative
@@ -238,6 +319,9 @@ export default function Home() {
           text-center
         "
       >
+        {/* =========================
+            Heading
+        ========================= */}
         <h1
           className="
             text-5xl
@@ -254,6 +338,9 @@ export default function Home() {
           Welcome To My Profile
         </h1>
 
+        {/* =========================
+            Typewriter
+        ========================= */}
         <div
           className="
             mt-6
@@ -272,6 +359,9 @@ export default function Home() {
           />
         </div>
 
+        {/* =========================
+            Description
+        ========================= */}
         <p
           className="
             mt-8
@@ -282,15 +372,26 @@ export default function Home() {
             leading-8
           "
         >
-          I am a passionate Full Stack Web Developer and
-          Creative UI/UX Designer from Bangladesh.
+          I am a passionate Full Stack Web Developer
+          and Creative UI/UX Designer from Bangladesh.
           I build modern, scalable and user-friendly
           web applications using React, Next.js,
           Node.js and MongoDB.
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
-
+        {/* =========================
+            Buttons
+        ========================= */}
+        <div
+          className="
+            mt-10
+            flex
+            flex-wrap
+            items-center
+            justify-center
+            gap-5
+          "
+        >
           {/* View Profile */}
           <Link
             href="/home"
@@ -406,7 +507,7 @@ export default function Home() {
               🔐 Login
             </Link>
 
-            {/* Tooltip */}
+            {/* Login Tooltip */}
             <div
               className="
                 pointer-events-none
@@ -432,32 +533,83 @@ export default function Home() {
                 z-50
               "
             >
-              <h4 className="font-semibold text-green-400">
+              <h4
+                className="
+                  font-semibold
+                  text-green-400
+                "
+              >
                 🚧 Login Coming Soon
               </h4>
 
-              <p className="mt-2 text-sm text-gray-300 leading-6">
+              <p
+                className="
+                  mt-2
+                  text-sm
+                  text-gray-300
+                  leading-6
+                "
+              >
                 For project inquiries or more details,
-                <span className="font-semibold text-cyan-400">
+                <span
+                  className="
+                    font-semibold
+                    text-cyan-400
+                  "
+                >
                   {" "}Contact Me
-                </span>{" "}
-                or send me an email.
+                </span>
+                {" "}or send me an email.
               </p>
 
-              <div className="mt-3 text-xs text-gray-500">
+              <div
+                className="
+                  mt-3
+                  text-xs
+                  text-gray-500
+                "
+              >
                 📧 mdshamioullislam2018@gmail.com
               </div>
             </div>
           </div>
         </div>
 
-        {/* Statistics */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-3xl mx-auto">
+        {/* =========================
+            Statistics
+        ========================= */}
+        <div
+          className="
+            mt-16
+            grid
+            grid-cols-2
+            md:grid-cols-4
+            gap-5
+            max-w-3xl
+            mx-auto
+          "
+        >
           {[
-            ["5+", "Years Experience", "green"],
-            ["20+", "Projects", "blue"],
-            ["15+", "Technologies", "purple"],
-            ["100%", "Dedication", "pink"],
+            {
+              value: "5+",
+              label: "Years Experience",
+              className: "text-green-400",
+            },
+            {
+              value: "20+",
+              label: "Projects",
+              className: "text-blue-400",
+            },
+            {
+              value: "15+",
+              label: "Technologies",
+              className: "text-purple-400",
+            },
+            {
+              value: "100%",
+              label: "Dedication",
+              className: "text-pink-400",
+            },
           ].map((item, index) => (
             <div
               key={index}
@@ -472,13 +624,17 @@ export default function Home() {
               "
             >
               <h3
-                className={`text-3xl font-bold text-${item[2]}-400`}
+                className={`
+                  text-3xl
+                  font-bold
+                  ${item.className}
+                `}
               >
-                {item[0]}
+                {item.value}
               </h3>
 
               <p className="text-gray-400">
-                {item[1]}
+                {item.label}
               </p>
             </div>
           ))}
@@ -487,3 +643,4 @@ export default function Home() {
     </section>
   );
 }
+
